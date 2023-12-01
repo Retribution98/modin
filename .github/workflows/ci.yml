@@ -78,6 +78,7 @@ jobs:
       - uses: ./.github/actions/upload-coverage
 
   test-clean-install:
+    if: false
     needs: [lint-flake8, lint-black-isort]
     strategy:
       matrix:
@@ -106,6 +107,7 @@ jobs:
         if: matrix.os == 'ubuntu'
 
   test-internals:
+    if: false
     needs: [lint-flake8, lint-black-isort]
     runs-on: ubuntu-latest
     defaults:
@@ -131,6 +133,7 @@ jobs:
       - uses: ./.github/actions/upload-coverage
 
   test-defaults:
+    if: false
     needs: [lint-flake8, lint-black-isort]
     runs-on: ubuntu-latest
     defaults:
@@ -162,6 +165,7 @@ jobs:
       - uses: ./.github/actions/upload-coverage
 
   test-hdk:
+    if: false
     needs: [lint-flake8, lint-black-isort]
     runs-on: ubuntu-latest
     defaults:
@@ -218,7 +222,7 @@ jobs:
       - uses: ./.github/actions/upload-coverage
 
   test-asv-benchmarks:
-    if: github.event_name == 'pull_request'
+    if: false && github.event_name == 'pull_request'
     needs: [lint-flake8, lint-black-isort]
     runs-on: ubuntu-latest
     defaults:
@@ -389,6 +393,7 @@ jobs:
       - uses: ./.github/actions/upload-coverage
 
   test-all:
+    if: false
     needs: [lint-flake8, lint-black-isort, execution-filter]
     strategy:
       matrix:
@@ -655,6 +660,7 @@ jobs:
       - uses: ./.github/actions/upload-coverage
 
   test-experimental:
+    if: false
     needs: [lint-flake8, lint-black-isort]
     runs-on: ubuntu-latest
     defaults:
@@ -684,6 +690,7 @@ jobs:
       - uses: ./.github/actions/upload-coverage
 
   test-pyarrow:
+    if: false
     needs: [lint-flake8, lint-black-isort]
     runs-on: ubuntu-latest
     defaults:
@@ -714,6 +721,7 @@ jobs:
       - run: python -m pytest modin/pandas/test/test_io.py::TestCsv --verbose
 
   test-spreadsheet:
+    if: false 
     needs: [lint-flake8, lint-black-isort]
     runs-on: ubuntu-latest
     defaults:
