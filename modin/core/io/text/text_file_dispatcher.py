@@ -1036,7 +1036,7 @@ class TextFileDispatcher(FileDispatcher):
             skiprows_md,
             header_size,
         )
-        if not use_modin_impl:
+        if False and not use_modin_impl:
             return cls.single_worker_read(
                 filepath_or_buffer,
                 kwargs,
@@ -1059,7 +1059,7 @@ class TextFileDispatcher(FileDispatcher):
             and pre_reading == 0
         )
         read_callback_kw = dict(kwargs, nrows=1, skipfooter=0, index_col=index_col)
-        if not can_compute_metadata_while_skipping_rows:
+        if False and not can_compute_metadata_while_skipping_rows:
             pd_df_metadata = cls.read_callback(
                 filepath_or_buffer_md,
                 **read_callback_kw,
@@ -1081,34 +1081,51 @@ class TextFileDispatcher(FileDispatcher):
             read_callback_kw.pop("storage_options", None)
             read_callback_kw.pop("compression", None)
 
-        with OpenFile(
-            filepath_or_buffer_md,
-            "rb",
-            compression_infered,
-            **(kwargs.get("storage_options", None) or {}),
-        ) as f:
-            old_pos = f.tell()
-            fio = io.TextIOWrapper(f, encoding=encoding, newline="")
-            newline, quotechar = cls.compute_newline(
-                fio, encoding, kwargs.get("quotechar", '"')
-            )
-            f.seek(old_pos)
+        num_partitions = NPartitions.get()
+        def my_func(filepath_or_buffer_md, compression_infered, kwargs, encoding, num_partitions, should_handle_skiprows, skiprows_partitioning, is_quoting, header_size, pre_reading, read_callback_kw):
+            with OpenFile(
+                filepath_or_buffer_md,
+                "rb",
+                compression_infered,
+                **(kwargs.get("storage_options", None) or {}),
+            ) as f:
+                old_pos = f.tell()
+                fio = io.TextIOWrapper(f, encoding=encoding, newline="")
+                newline, quotechar = cls.compute_newline(
+                    fio, encoding, kwargs.get("quotechar", '"')
+                )
+                f.seek(old_pos)
 
-            splits, pd_df_metadata_temp = cls.partitioned_file(
-                f,
-                num_partitions=NPartitions.get(),
-                nrows=kwargs["nrows"] if not should_handle_skiprows else None,
-                skiprows=skiprows_partitioning,
-                quotechar=quotechar,
-                is_quoting=is_quoting,
-                encoding=encoding,
-                newline=newline,
-                header_size=header_size,
-                pre_reading=pre_reading,
-                read_callback_kw=read_callback_kw,
-            )
-            if can_compute_metadata_while_skipping_rows:
-                pd_df_metadata = pd_df_metadata_temp
+                splits, pd_df_metadata_temp = cls.partitioned_file(
+                    f,
+                    num_partitions=num_partitions,
+                    nrows=kwargs["nrows"] if not should_handle_skiprows else None,
+                    skiprows=skiprows_partitioning,
+                    quotechar=quotechar,
+                    is_quoting=is_quoting,
+                    encoding=encoding,
+                    newline=newline,
+                    header_size=header_size,
+                    pre_reading=pre_reading,
+                    read_callback_kw=read_callback_kw,
+                )
+                # if can_compute_metadata_while_skipping_rows:
+                #     pd_df_metadata = pd_df_metadata_temp
+                return splits, pd_df_metadata_temp
+
+        splits_id, pd_df_metadata_temp_id = cls.deploy(
+            my_func,
+            f_args=(filepath_or_buffer_md, compression_infered, kwargs, encoding, num_partitions, should_handle_skiprows, skiprows_partitioning, is_quoting, header_size, pre_reading, read_callback_kw),
+            num_returns=2
+        )
+
+        [splits, pd_df_metadata_temp] = cls.materialize([splits_id, pd_df_metadata_temp_id])
+        
+        pd_df_metadata = pd_df_metadata_temp
+
+        if can_compute_metadata_while_skipping_rows:
+            pd_df_metadata = pd_df_metadata_temp
+
 
         # compute dtypes if possible
         common_dtypes = None
