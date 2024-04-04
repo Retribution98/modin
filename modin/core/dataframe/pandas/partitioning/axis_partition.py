@@ -239,7 +239,7 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         list
             A list of `PandasDataframePartition` objects.
         """
-        if not self.full_axis:
+        if False and not self.full_axis:
             # If this is not a full axis partition, it already contains a subset of
             # the full axis, so we shouldn't split the result further.
             num_splits = 1
@@ -295,7 +295,7 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
             return result
         else:
             # If this is not a full axis partition, just take out the single split in the result.
-            return result[0]
+            return result
 
     def split(
         self, split_func, num_splits, f_args=None, f_kwargs=None, extract_metadata=False
