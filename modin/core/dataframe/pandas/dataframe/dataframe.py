@@ -19,6 +19,7 @@ for pandas storage format.
 """
 import datetime
 import re
+import time
 from typing import TYPE_CHECKING, Callable, Dict, Hashable, List, Optional, Union
 
 import numpy as np
@@ -2202,44 +2203,31 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
         PandasDataframe
             A new dataframe.
         """
-        if self.num_parts <= 1.5 * CpuCount.get():
-            # block-wise map
-            map_fn = (
-                self._partition_mgr_cls.lazy_map_partitions
-                if lazy
-                else self._partition_mgr_cls.map_partitions
-            )
-            new_partitions = map_fn(self._partitions, func, func_args, func_kwargs)
-        else:
-            # axis-wise map
-            # we choose an axis for a combination of partitions whose size is closer to the number of CPUs
-            axis = 0
-            if abs(self._partitions.shape[0] - CpuCount.get()) < abs(
-                self._partitions.shape[1] - CpuCount.get()
-            ):
-                axis = 1
-
-            column_splits = (
-                self._partitions.shape[0] * self._partitions.shape[1]
-            ) // CpuCount.get()
-
-            if axis == 1 or column_splits <= 1:
-                # splitting by full axis partitions
-                new_partitions = self._partition_mgr_cls.map_axis_partitions(
-                    axis,
-                    self._partitions,
-                    func,
-                    keep_partitioning=True,
-                    map_func_args=func_args,
-                    map_func_kwargs=func_kwargs,
-                )
-            else:
-                # splitting by parts of columnar partitions
-                new_partitions = (
-                    self._partition_mgr_cls.map_partitions_joined_by_column(
-                        self._partitions, column_splits, func, func_args, func_kwargs
-                    )
-                )
+        t0 = time.perf_counter()
+        map_fn = (
+            self._partition_mgr_cls.lazy_map_partitions
+            if lazy
+            else self._partition_mgr_cls.map_partitions
+        )
+        new_partitions = map_fn(self._partitions, func, func_args, func_kwargs)
+        t1 = time.perf_counter()
+        approach = f'0_{lazy}'
+        axis = None
+        column_splits = None
+        p = [str(x) for x in [
+            "MAP PERFORMANCE",
+            self.num_parts, # 440
+            CpuCount.get(), # 44
+            sum(self.row_lengths), # 1371980
+            sum(self.column_widths), # 299
+            self._partitions.shape[0], # 44
+            self._partitions.shape[1], # 10
+            axis, # 1
+            column_splits, # 11
+            approach, # 1
+            t1-t0,
+        ]]
+        print(','.join(p))
         if new_columns is not None and self.has_materialized_columns:
             assert len(new_columns) == len(
                 self.columns
