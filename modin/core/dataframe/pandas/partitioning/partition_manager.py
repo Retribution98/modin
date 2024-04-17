@@ -18,6 +18,7 @@ The manager also allows manipulating the data - running functions at each partit
 """
 
 import os
+import time
 import warnings
 from abc import ABC
 from functools import wraps
@@ -537,6 +538,7 @@ class PandasDataframePartitionManager(
         NumPy array
             An array of partition objects.
         """
+        t0 = time.perf_counter()
         ErrorMessage.catch_bugs_and_request_email(
             failure_condition=keep_partitioning and lengths is not None,
             extra_log=f"`keep_partitioning` must be set to `False` when passing `lengths`. Got: {keep_partitioning=} | {lengths=}",
@@ -590,6 +592,23 @@ class PandasDataframePartitionManager(
         # If we are mapping over columns, they are returned to use the same as
         # rows, so we need to transpose the returned 2D NumPy array to return
         # the structure to the correct order.
+        t1 = time.perf_counter()
+        p = [str(x) for x in [
+            "broadcast_axis_partitions PERFORMANCE",
+            axis,
+            apply_func,
+            np.array(left).shape if left is not None else "",
+            np.array(right).shape if right is not None else "",
+            keep_partitioning,
+            num_splits,
+            apply_indices,
+            enumerate_partitions,
+            lengths,
+            len(apply_func_args if apply_func_args is not None else []),
+            ";".join(kwargs.keys()),
+            t1-t0
+        ]]
+        print(','.join(p))
         return result_blocks.T if not axis else result_blocks
 
     @classmethod

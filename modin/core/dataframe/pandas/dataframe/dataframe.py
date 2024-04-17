@@ -19,6 +19,7 @@ for pandas storage format.
 """
 import datetime
 import re
+import time
 from typing import TYPE_CHECKING, Callable, Dict, Hashable, List, Optional, Union
 
 import numpy as np
@@ -2202,12 +2203,31 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
         PandasDataframe
             A new dataframe.
         """
+        t0 = time.perf_counter()
         map_fn = (
             self._partition_mgr_cls.lazy_map_partitions
             if lazy
             else self._partition_mgr_cls.map_partitions
         )
         new_partitions = map_fn(self._partitions, func, func_args, func_kwargs)
+        t1 = time.perf_counter()
+        approach = f'0_{lazy}'
+        axis = None
+        column_splits = None
+        p = [str(x) for x in [
+            "MAP PERFORMANCE",
+            self.num_parts, # 440
+            "CpuCount.get()", # 44
+            sum(self.row_lengths), # 1371980
+            sum(self.column_widths), # 299
+            self._partitions.shape[0], # 44
+            self._partitions.shape[1], # 10
+            axis, # 1
+            column_splits, # 11
+            approach, # 1
+            t1-t0,
+        ]]
+        print(','.join(p))
         if new_columns is not None and self.has_materialized_columns:
             assert len(new_columns) == len(
                 self.columns
