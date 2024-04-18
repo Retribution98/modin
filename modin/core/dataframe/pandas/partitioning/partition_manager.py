@@ -496,6 +496,7 @@ class PandasDataframePartitionManager(
         lengths=None,
         apply_func_args=None,
         apply_func_kwargs=None,
+        **kwargs,
     ):
         """
         Broadcast the `right` partitions to `left` and apply `apply_func` along full `axis`.
@@ -584,9 +585,9 @@ class PandasDataframePartitionManager(
                 left_partitions[i].apply(
                     preprocessed_map_func,
                     *(apply_func_args if apply_func_args else []),
-                    **apply_func_kwargs if apply_func_kwargs is not None else {},
                     **kw,
                     **({"partition_idx": idx} if enumerate_partitions else {}),
+                    **(apply_func_kwargs if apply_func_kwargs is not None else {}),
                 )
                 for idx, i in enumerate(apply_indices)
             ]
@@ -694,8 +695,8 @@ class PandasDataframePartitionManager(
                     part.add_to_apply_calls(
                         preprocessed_map_func,
                         *(tuple() if func_args is None else func_args),
-                        **func_kwargs if func_kwargs is not None else {},
                         **({"partition_idx": i} if enumerate_partitions else {}),
+                        **(func_kwargs if func_kwargs is not None else {}),
                     )
                     for part in row
                 ]
@@ -715,6 +716,7 @@ class PandasDataframePartitionManager(
         enumerate_partitions=False,
         map_func_args=None,
         map_func_kwargs=None,
+        **kwargs,
     ):
         """
         Apply `map_func` to every partition in `partitions` along given `axis`.
