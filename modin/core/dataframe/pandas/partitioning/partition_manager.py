@@ -576,7 +576,6 @@ class PandasDataframePartitionManager(
         # load-balance the data as well.
         kw = {
             "num_splits": num_splits,
-            "other_axis_partition": right_partitions,
             "maintain_partitioning": keep_partitioning,
         }
         if lengths:
@@ -591,6 +590,7 @@ class PandasDataframePartitionManager(
                 left_partitions[i].apply(
                     preprocessed_map_func,
                     *(apply_func_args if apply_func_args else []),
+                    other_axis_partition=right_partitions[i] if right_partitions is not None else None,
                     **kw,
                     **({"partition_idx": idx} if enumerate_partitions else {}),
                     **kwargs,
